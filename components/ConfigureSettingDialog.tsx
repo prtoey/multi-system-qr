@@ -1,9 +1,11 @@
 import { X } from "lucide-react";
-import { SystemConfig, LabelConfig } from "../components/types";
+import { SystemConfig, LabelConfig, TemplateConfig } from "../components/types";
 import { SaveSettingsButton } from "./SaveSettingsButton";
 import { ResetSettingsButton } from "./ResetSettingsButton";
 import { AddDataButton } from "./AddDataButton";
+import { AddTypedDataButton } from "./AddTypedDataButton";
 import { DeleteRowButton } from "./DeleteRowButton";
+import { TemplateDropdown } from "./TemplateDropdown";
 
 interface ConfigureSettingDialogProps {
   isOpen: boolean;
@@ -24,15 +26,24 @@ interface ConfigureSettingDialogProps {
   onQtyQRCellChange: (value: string) => void;
   systems: SystemConfig[];
   onAddDataRow: (systemId: string) => void;
+  onAddTypedDataRow: (systemId: string) => void;
   onRemoveDataRow: (systemId: string, rowId: string) => void;
   onUpdateDataRow: (
     systemId: string,
     rowId: string,
-    field: "itemDataCell" | "itemQRCell" | "itemDataLabel" | "itemQRLabel",
+    field:
+      | "itemDataCell"
+      | "itemQRCell"
+      | "itemDataLabel"
+      | "itemQRLabel"
+      | "type",
     value: string
   ) => void;
   onSaveSettings: () => void;
   onResetSettings: () => void;
+  templates: TemplateConfig[];
+  selectedTemplateId: string | null;
+  onTemplateChange: (templateId: string) => void;
 }
 
 export function ConfigureSettingDialog({
@@ -54,10 +65,14 @@ export function ConfigureSettingDialog({
   onQtyQRCellChange,
   systems,
   onAddDataRow,
+  onAddTypedDataRow,
   onRemoveDataRow,
   onUpdateDataRow,
   onSaveSettings,
   onResetSettings,
+  templates,
+  selectedTemplateId,
+  onTemplateChange,
 }: ConfigureSettingDialogProps) {
   if (!isOpen) return null;
 
@@ -72,7 +87,7 @@ export function ConfigureSettingDialog({
       >
         <div className="sticky top-0 bg-white p-6 border-b border-indigo-200 rounded-t-xl flex items-center justify-between">
           <h2 className="text-2xl font-bold text-indigo-900">
-            CONFIGURE SETTINGS
+            Configure Settings
           </h2>
           <button
             onClick={onClose}
@@ -83,8 +98,17 @@ export function ConfigureSettingDialog({
         </div>
 
         <div className="p-6 space-y-4">
+          {/* Template Selector */}
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
+            <TemplateDropdown
+              templates={templates}
+              selectedTemplateId={selectedTemplateId}
+              onTemplateChange={onTemplateChange}
+            />
+          </div>
+
           {/* Global Settings */}
-          <div className="bg-gradient from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
                 <input
@@ -176,7 +200,7 @@ export function ConfigureSettingDialog({
           {/* Systems */}
           {systems.map((system, index) => (
             <div key={system.id}>
-              <div className="bg-blue-500 text-white px-4 py-2 rounded-t-lg shadow-md font-semibold">
+              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-t-lg shadow-md font-semibold">
                 {index + 1}. {system.name}
               </div>
               <div className="bg-white p-4 rounded-b-lg shadow-md border border-blue-200">
@@ -200,60 +224,218 @@ export function ConfigureSettingDialog({
                 ) : (
                   // Multiple row system
                   <div className="space-y-2">
-                    {system.dataRows.map((row) => (
-                      <div
-                        key={row.id}
-                        className="grid grid-cols-[1fr_100px_1fr_100px_40px] gap-2 items-center"
-                      >
-                        <input
-                          type="text"
-                          value={row.itemDataLabel || "ITEM DATA"}
-                          onChange={(e) =>
-                            onUpdateDataRow(
-                              system.id,
-                              row.id,
-                              "itemDataLabel",
-                              e.target.value
-                            )
-                          }
-                          className="bg-blue-100 text-blue-900 px-3 py-1 rounded font-medium border border-blue-300 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                          placeholder="Label name"
+                    {system.name === "PRINT LABEL" ? (
+                      // Special layout for PRINT LABEL with type grouping
+                      <>
+                        {/* Group rows by type */}
+                        {["BOX", "BAG", "MATCHING", null].map((typeGroup) => {
+                          const rowsInGroup = system.dataRows.filter((row) =>
+                            typeGroup === null
+                              ? !row.type
+                              : row.type === typeGroup
+                          );
+
+                          if (rowsInGroup.length === 0) return null;
+
+                          return (
+                            <div key={typeGroup || "no-type"} className="mb-4">
+                              {/* Type Group Header */}
+                              {typeGroup && (
+                                <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-t-lg font-bold text-sm mb-2">
+                                  TYPE: {typeGroup}
+                                </div>
+                              )}
+                              {!typeGroup && (
+                                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-t-lg font-bold text-sm mb-2">
+                                  REGULAR DATA (NO TYPE)
+                                </div>
+                              )}
+
+                              {/* Rows in this type group */}
+                              <div className="space-y-2 border-2 border-purple-200 rounded-b-lg p-3 bg-purple-50/30">
+                                {rowsInGroup.map((row) => (
+                                  <div key={row.id}>
+                                    {/* Show Type selector if row has type */}
+                                    {row.type && (
+                                      <div className="mb-2">
+                                        <label className="text-sm font-medium text-blue-900 mr-2">
+                                          Type:
+                                        </label>
+                                        <select
+                                          value={row.type}
+                                          onChange={(e) =>
+                                            onUpdateDataRow(
+                                              system.id,
+                                              row.id,
+                                              "type",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="px-3 py-1 border border-blue-300 rounded bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none font-medium text-blue-900"
+                                        >
+                                          <option value="BOX">BOX</option>
+                                          <option value="BAG">BAG</option>
+                                          <option value="MATCHING">
+                                            MATCHING
+                                          </option>
+                                        </select>
+                                      </div>
+                                    )}
+
+                                    {/* Item Data and QR Together */}
+                                    <div className="grid grid-cols-[150px_1fr_40px] gap-2 items-center bg-white p-2 rounded border border-purple-200">
+                                      <input
+                                        type="text"
+                                        value={row.itemDataLabel || "ITEM DATA"}
+                                        onChange={(e) =>
+                                          onUpdateDataRow(
+                                            system.id,
+                                            row.id,
+                                            "itemDataLabel",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="bg-blue-100 text-blue-900 px-3 py-1 rounded font-medium border border-blue-300 focus:ring-2 focus:ring-blue-400 focus:outline-none text-center"
+                                        placeholder="Label name"
+                                      />
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <label className="text-xs text-blue-700 block mb-1">
+                                            Data Cell
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={row.itemDataCell}
+                                            onChange={(e) =>
+                                              onUpdateDataRow(
+                                                system.id,
+                                                row.id,
+                                                "itemDataCell",
+                                                e.target.value
+                                              )
+                                            }
+                                            className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                            placeholder="e.g., BF3"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs text-blue-700 block mb-1">
+                                            QR Cell
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={row.itemQRCell}
+                                            onChange={(e) =>
+                                              onUpdateDataRow(
+                                                system.id,
+                                                row.id,
+                                                "itemQRCell",
+                                                e.target.value
+                                              )
+                                            }
+                                            className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                            placeholder="e.g., A4"
+                                          />
+                                        </div>
+                                      </div>
+                                      <DeleteRowButton
+                                        onClick={() =>
+                                          onRemoveDataRow(system.id, row.id)
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      // Regular layout for other systems
+                      <>
+                        {system.dataRows.map((row) => (
+                          <div key={row.id}>
+                            {/* Item Data and QR Together */}
+                            <div className="grid grid-cols-[150px_1fr_40px] gap-2 items-center bg-blue-50 p-2 rounded">
+                              <input
+                                type="text"
+                                value={row.itemDataLabel || "ITEM DATA"}
+                                onChange={(e) =>
+                                  onUpdateDataRow(
+                                    system.id,
+                                    row.id,
+                                    "itemDataLabel",
+                                    e.target.value
+                                  )
+                                }
+                                className="bg-blue-100 text-blue-900 px-3 py-1 rounded font-medium border border-blue-300 focus:ring-2 focus:ring-blue-400 focus:outline-none text-center"
+                                placeholder="Label name"
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs text-blue-700 block mb-1">
+                                    Data Cell
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={row.itemDataCell}
+                                    onChange={(e) =>
+                                      onUpdateDataRow(
+                                        system.id,
+                                        row.id,
+                                        "itemDataCell",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                    placeholder="e.g., BF3"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-blue-700 block mb-1">
+                                    QR Cell
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={row.itemQRCell}
+                                    onChange={(e) =>
+                                      onUpdateDataRow(
+                                        system.id,
+                                        row.id,
+                                        "itemQRCell",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                    placeholder="e.g., A4"
+                                  />
+                                </div>
+                              </div>
+                              <DeleteRowButton
+                                onClick={() =>
+                                  onRemoveDataRow(system.id, row.id)
+                                }
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Show both buttons for PRINT LABEL system */}
+                    {system.name === "PRINT LABEL" ? (
+                      <div className="flex gap-2">
+                        <AddDataButton
+                          onClick={() => onAddDataRow(system.id)}
                         />
-                        <input
-                          type="text"
-                          value={row.itemDataCell}
-                          onChange={(e) =>
-                            onUpdateDataRow(
-                              system.id,
-                              row.id,
-                              "itemDataCell",
-                              e.target.value
-                            )
-                          }
-                          className="px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                        />
-                        <div className="bg-blue-100 text-blue-900 px-3 py-1 rounded font-medium border border-blue-300">
-                          {row.itemQRLabel || "QR CODE"}
-                        </div>
-                        <input
-                          type="text"
-                          value={row.itemQRCell}
-                          onChange={(e) =>
-                            onUpdateDataRow(
-                              system.id,
-                              row.id,
-                              "itemQRCell",
-                              e.target.value
-                            )
-                          }
-                          className="px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                        />
-                        <DeleteRowButton
-                          onClick={() => onRemoveDataRow(system.id, row.id)}
+                        <AddTypedDataButton
+                          onClick={() => onAddTypedDataRow(system.id)}
                         />
                       </div>
-                    ))}
-                    <AddDataButton onClick={() => onAddDataRow(system.id)} />
+                    ) : (
+                      <AddDataButton onClick={() => onAddDataRow(system.id)} />
+                    )}
                   </div>
                 )}
               </div>

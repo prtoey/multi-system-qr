@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react';
+import { FileText } from "lucide-react";
 
 interface TemplateButtonProps {
   onClick: () => void;
@@ -6,12 +6,12 @@ interface TemplateButtonProps {
 
 export function TemplateButton({ onClick }: TemplateButtonProps) {
   return (
-    <button 
+    <button
       onClick={onClick}
-      className="bg-white px-4 py-2 rounded-lg shadow border border-indigo-300 flex items-center gap-2 hover:bg-indigo-50 transition"
+      className="w-full bg-gradient-to-r from-green-600 to-green-700 text-xs text-white px-6 py-2 rounded-lg shadow-lg font-semibold flex items-center justify-start gap-2 transition hover:from-green-700 hover:to-green-800 hover:shadow-xl"
     >
-      <FileText className="w-5 h-5 text-indigo-600" />
-      <span className="text-indigo-900">TEMPLATE</span>
+      <FileText className="text-xs" />
+      UPLOAD TEMPLATE
     </button>
   );
 }

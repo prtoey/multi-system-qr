@@ -1,55 +1,46 @@
 "use client";
-import {
-  FileText,
-  Upload,
-  Download,
-  QrCode,
-  Plus,
-  X,
-  Save,
-  RotateCcw,
-  ChevronDown,
-  ChevronUp,
-  Settings,
-} from "lucide-react";
+import { FileText, Upload, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import QRCode from "qrcode";
-import { DataField, SystemConfig, LabelConfig } from "../components/types";
+import {
+  SystemConfig,
+  LabelConfig,
+  TemplateConfig,
+  DataRow,
+} from "../components/types";
 import { TemplateButton } from "../components/TemplateButton";
+import { EditTemplateButton } from "../components/EditTemplateButton";
+import { DeleteTemplateButton } from "../components/DeleteTemplateButton";
 import { ConfigureSettingButton } from "../components/ConfigureSettingButton";
 import { GenerateQRButton } from "../components/GenerateQRButton";
-import { TemplateDialog } from "../components/TemplateDialog";
+import { TemplateUploadDialog } from "../components/TemplateUploadDialog";
+import { EditTemplateDialog } from "../components/EditTemplateDialog";
+import { DeleteTemplateDialog } from "../components/DeleteTemplateDialog";
 import { ConfigureSettingDialog } from "../components/ConfigureSettingDialog";
-
+import { TemplateDropdown } from "../components/TemplateDropdown";
+import { ExcelStyleGrid } from "../components/ExcelStyleGrid";
 export default function ClientLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [templateFile, setTemplateFile] = useState<File | null>(null);
-  const [templateWorkbook, setTemplateWorkbook] =
-    useState<XLSX.WorkBook | null>(null);
+  const [templates, setTemplates] = useState<TemplateConfig[]>([]);
+  const [selectedConfigTemplateId, setSelectedConfigTemplateId] = useState<
+    string | null
+  >(null);
 
-  // Configure settings
-  const [itemDataCell, setItemDataCell] = useState("BF3");
-  const [itemQRCell, setItemQRCell] = useState("A4");
-  const [lotDataCell, setLotDataCell] = useState("BF3");
-  const [lotQRCell, setLotQRCell] = useState("L4");
-  const [qtyDataCell, setQtyDataCell] = useState("BF3");
-  const [qtyQRCell, setQtyQRCell] = useState("W4");
+  // Data grid for QR generation
+  const [dataRows, setDataRows] = useState<DataRow[]>([]);
 
-  // Label configuration
-  const [labels, setLabels] = useState<LabelConfig>({
-    itemDataLabel: "ITEM DATA",
-    itemQRLabel: "QR CODE",
-    lotDataLabel: "LOT DATA",
-    lotQRLabel: "QR CODE",
-    qtyDataLabel: "Q'TY DATA",
-    qtyQRLabel: "QR CODE",
-  });
+  // Dialog states
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const [systems, setSystems] = useState<SystemConfig[]>([
+  // Get default systems configuration
+  const getDefaultSystems = (): SystemConfig[] => [
     {
       id: "1",
       name: "PROMOS SYSTEM",
@@ -67,9 +58,9 @@ export default function ClientLayout({
       name: "PRINT LABEL",
       fields: [],
       dataRows: [
-        { id: "1", itemDataCell: "BF3", itemQRCell: "A4" },
-        { id: "2", itemDataCell: "BF3", itemQRCell: "A4" },
-        { id: "3", itemDataCell: "BF3", itemQRCell: "A4" },
+        { id: "1", itemDataCell: "BF3", itemQRCell: "A4", type: "BOX" },
+        { id: "2", itemDataCell: "BF3", itemQRCell: "A4", type: "BAG" },
+        { id: "3", itemDataCell: "BF3", itemQRCell: "A4", type: "MATCHING" },
       ],
     },
     {
@@ -92,373 +83,864 @@ export default function ClientLayout({
         { id: "3", itemDataCell: "BF3", itemQRCell: "A4" },
       ],
     },
-  ]);
+  ];
 
-  // Toggle for Configure Setting visibility
-  const [isConfigVisible, setIsConfigVisible] = useState(true);
-
-  // Template dialog state
-  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
-  const [templatePassword, setTemplatePassword] = useState("");
-  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  // Configure setting dialog state
-  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
-
-  // Set your password here
-  const TEMPLATE_PASSWORD = "admin123"; // Change this to your desired password
-
-  // Load settings from localStorage on mount
+  // Load templates from localStorage on mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem("qrGeneratorSettings");
-    if (savedSettings) {
+    const savedTemplates = localStorage.getItem("qrGeneratorTemplates");
+    if (savedTemplates) {
       try {
-        const parsed = JSON.parse(savedSettings);
-        if (parsed.labels) setLabels(parsed.labels);
-        if (parsed.cells) {
-          setItemDataCell(parsed.cells.itemDataCell || "BF3");
-          setItemQRCell(parsed.cells.itemQRCell || "A4");
-          setLotDataCell(parsed.cells.lotDataCell || "BF3");
-          setLotQRCell(parsed.cells.lotQRCell || "L4");
-          setQtyDataCell(parsed.cells.qtyDataCell || "BF3");
-          setQtyQRCell(parsed.cells.qtyQRCell || "W4");
+        const parsed = JSON.parse(savedTemplates);
+        setTemplates(parsed);
+        if (parsed.length > 0) {
+          setSelectedConfigTemplateId(parsed[0].id);
         }
-        if (parsed.systems) setSystems(parsed.systems);
       } catch (e) {
-        console.error("Error loading settings:", e);
+        console.error("Error loading templates:", e);
       }
     }
   }, []);
 
-  // Save settings to localStorage
-  const handleSaveSettings = () => {
-    const settings = {
-      labels,
-      cells: {
-        itemDataCell,
-        itemQRCell,
-        lotDataCell,
-        lotQRCell,
-        qtyDataCell,
-        qtyQRCell,
-      },
-      systems,
-    };
-    localStorage.setItem("qrGeneratorSettings", JSON.stringify(settings));
-    alert("Settings saved successfully!");
-  };
+  // Save templates to localStorage whenever they change
+  useEffect(() => {
+    if (templates.length > 0) {
+      localStorage.setItem("qrGeneratorTemplates", JSON.stringify(templates));
+    }
+  }, [templates]);
 
-  // Reset to default settings
-  const handleResetSettings = () => {
-    if (confirm("Are you sure you want to reset all settings to default?")) {
-      setLabels({
+  // Handle template upload
+  const handleUploadTemplate = (name: string, workbook: any) => {
+    // Check if template with same name exists
+    const existingTemplate = templates.find(
+      (t) => t.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (existingTemplate) {
+      // Ask user if they want to replace
+      const shouldReplace = confirm(
+        `A template named "${name}" already exists. Do you want to replace it?\n\n` +
+          `Click OK to replace the existing template.\n` +
+          `Click Cancel to keep both templates.`
+      );
+
+      if (shouldReplace) {
+        // Replace existing template (keep settings, update workbook)
+        setTemplates(
+          templates.map((t) =>
+            t.id === existingTemplate.id
+              ? {
+                  ...t,
+                  workbook,
+                  uploadedAt: new Date().toISOString(),
+                }
+              : t
+          )
+        );
+        setSelectedConfigTemplateId(existingTemplate.id);
+        alert(`Template "${name}" has been replaced successfully!`);
+        return;
+      }
+    }
+
+    // Create new template
+    const newTemplate: TemplateConfig = {
+      id: Date.now().toString(),
+      name,
+      uploadedAt: new Date().toISOString(),
+      workbook,
+      labels: {
         itemDataLabel: "ITEM DATA",
         itemQRLabel: "QR CODE",
         lotDataLabel: "LOT DATA",
         lotQRLabel: "QR CODE",
         qtyDataLabel: "Q'TY DATA",
         qtyQRLabel: "QR CODE",
-      });
-      setItemDataCell("BF3");
-      setItemQRCell("A4");
-      setLotDataCell("BF3");
-      setLotQRCell("L4");
-      setQtyDataCell("BF3");
-      setQtyQRCell("W4");
-      localStorage.removeItem("qrGeneratorSettings");
-      alert("Settings reset to default!");
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setTemplateFile(file);
-      // Auto-import when template is selected from dialog
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const data = event.target?.result;
-        const workbook = XLSX.read(data, { type: "binary", cellFormula: true });
-        setTemplateWorkbook(workbook);
-        setIsTemplateDialogOpen(false);
-        alert("Template imported successfully!");
-      };
-      reader.readAsBinaryString(file);
-    }
-  };
-
-  const handleTemplateFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setTemplateFile(file);
-      // Auto-import when template is selected from dialog
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const data = event.target?.result;
-        const workbook = XLSX.read(data, { type: "binary", cellFormula: true });
-        setTemplateWorkbook(workbook);
-        // setIsTemplateDialogOpen(false);
-        // alert("Template imported successfully!");
-      };
-      reader.readAsBinaryString(file);
-    }
-  };
-
-  const handleClearFile = () => {
-    setTemplateFile(null);
-    setTemplateWorkbook(null);
-  };
-
-  const handleImport = () => {
-    if (!templateFile) {
-      alert("Please select a file first");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const data = event.target?.result;
-      const workbook = XLSX.read(data, { type: "binary", cellFormula: true });
-      setTemplateWorkbook(workbook);
-      alert("Template imported successfully!");
+      },
+      itemDataCell: "BF3",
+      itemQRCell: "A4",
+      lotDataCell: "BF3",
+      lotQRCell: "L4",
+      qtyDataCell: "BF3",
+      qtyQRCell: "W4",
+      systems: getDefaultSystems(),
     };
-    reader.readAsBinaryString(templateFile);
+
+    setTemplates([...templates, newTemplate]);
+    setSelectedConfigTemplateId(newTemplate.id);
+    alert(`Template "${name}" uploaded successfully!`);
   };
 
-  const handleGenerateQRCode = async () => {
-    if (!templateWorkbook) {
-      alert("Please import template first");
-      return;
-    }
+  // Get current template being configured
+  const getCurrentTemplate = () => {
+    return templates.find((t) => t.id === selectedConfigTemplateId);
+  };
 
-    const newWb = XLSX.utils.book_new();
-    const sheetName = templateWorkbook.SheetNames[0];
-    const sheet = JSON.parse(
-      JSON.stringify(templateWorkbook.Sheets[sheetName])
+  // Template configuration functions
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedConfigTemplateId(templateId);
+  };
+
+  const handleLabelsChange = (labels: LabelConfig) => {
+    if (!selectedConfigTemplateId) return;
+    setTemplates(
+      templates.map((t) =>
+        t.id === selectedConfigTemplateId ? { ...t, labels } : t
+      )
     );
+  };
 
-    // Generate QR codes for each system
-    for (const system of systems) {
-      if (system.fields.length > 0) {
-        // Single field system (like PROMOS SYSTEM)
-        const qrData = system.fields.map((f) => f.cell).join(" | ");
-        const qrDataUrl = await QRCode.toDataURL(qrData, { width: 100 });
+  const handleCellChange = (field: string, value: string) => {
+    if (!selectedConfigTemplateId) return;
+    setTemplates(
+      templates.map((t) =>
+        t.id === selectedConfigTemplateId ? { ...t, [field]: value } : t
+      )
+    );
+  };
 
-        const qrField = system.fields.find((f) => f.label.includes("QR"));
-        if (qrField) {
-          sheet[qrField.cell] = {
-            v: `QR: ${qrData.substring(0, 30)}...`,
-            t: "s",
-            l: { Target: qrDataUrl },
-          };
-        }
-      } else {
-        // Multiple row system
-        for (const row of system.dataRows) {
-          const qrData = `${row.itemDataCell} -> ${row.itemQRCell}`;
-          const qrDataUrl = await QRCode.toDataURL(qrData, { width: 100 });
-
-          sheet[row.itemQRCell] = {
-            v: `QR: ${qrData}`,
-            t: "s",
-            l: { Target: qrDataUrl },
-          };
-        }
-      }
-    }
-
-    XLSX.utils.book_append_sheet(newWb, sheet, sheetName);
-    XLSX.writeFile(newWb, "generated_qrcodes.xlsx");
+  const handleSystemsChange = (systems: SystemConfig[]) => {
+    if (!selectedConfigTemplateId) return;
+    setTemplates(
+      templates.map((t) =>
+        t.id === selectedConfigTemplateId ? { ...t, systems } : t
+      )
+    );
   };
 
   const addDataRow = (systemId: string) => {
-    setSystems(
-      systems.map((sys) => {
-        if (sys.id === systemId) {
-          return {
-            ...sys,
-            dataRows: [
-              ...sys.dataRows,
-              {
-                id: Date.now().toString(),
-                itemDataCell: "BF3",
-                itemQRCell: "A4",
-              },
-            ],
-          };
-        }
-        return sys;
-      })
-    );
+    const template = getCurrentTemplate();
+    if (!template) return;
+
+    const updatedSystems = template.systems.map((sys) => {
+      if (sys.id === systemId) {
+        const timestamp = Date.now();
+        const newRows = [
+          ...sys.dataRows,
+          { id: timestamp.toString(), itemDataCell: "BF3", itemQRCell: "A4" },
+        ];
+        return { ...sys, dataRows: newRows };
+      }
+      return sys;
+    });
+
+    handleSystemsChange(updatedSystems);
+  };
+
+  const addTypedDataRow = (systemId: string) => {
+    const template = getCurrentTemplate();
+    if (!template) return;
+
+    const updatedSystems = template.systems.map((sys) => {
+      if (sys.id === systemId) {
+        const timestamp = Date.now();
+        let newRows = [
+          ...sys.dataRows,
+          {
+            id: `${timestamp}-1`,
+            itemDataCell: "BF3",
+            itemQRCell: "A4",
+            type: "BOX" as const,
+          },
+          {
+            id: `${timestamp}-2`,
+            itemDataCell: "BF3",
+            itemQRCell: "A4",
+            type: "BAG" as const,
+          },
+          {
+            id: `${timestamp}-3`,
+            itemDataCell: "BF3",
+            itemQRCell: "A4",
+            type: "MATCHING" as const,
+          },
+        ];
+
+        newRows.sort((a, b) => {
+          const order = { BOX: 1, BAG: 2, MATCHING: 3 };
+          const aOrder = a.type ? order[a.type] : 999;
+          const bOrder = b.type ? order[b.type] : 999;
+          return aOrder - bOrder;
+        });
+
+        return { ...sys, dataRows: newRows };
+      }
+      return sys;
+    });
+
+    handleSystemsChange(updatedSystems);
   };
 
   const removeDataRow = (systemId: string, rowId: string) => {
-    setSystems(
-      systems.map((sys) => {
-        if (sys.id === systemId) {
-          return {
-            ...sys,
-            dataRows: sys.dataRows.filter((row) => row.id !== rowId),
-          };
-        }
-        return sys;
-      })
-    );
+    const template = getCurrentTemplate();
+    if (!template) return;
+
+    const updatedSystems = template.systems.map((sys) => {
+      if (sys.id === systemId) {
+        return {
+          ...sys,
+          dataRows: sys.dataRows.filter((row) => row.id !== rowId),
+        };
+      }
+      return sys;
+    });
+
+    handleSystemsChange(updatedSystems);
   };
 
   const updateDataRow = (
     systemId: string,
     rowId: string,
-    field: "itemDataCell" | "itemQRCell" | "itemDataLabel" | "itemQRLabel",
+    field:
+      | "itemDataCell"
+      | "itemQRCell"
+      | "itemDataLabel"
+      | "itemQRLabel"
+      | "type",
     value: string
   ) => {
-    setSystems(
-      systems.map((sys) => {
-        if (sys.id === systemId) {
-          return {
-            ...sys,
-            dataRows: sys.dataRows.map((row) =>
-              row.id === rowId ? { ...row, [field]: value } : row
-            ),
-          };
+    const template = getCurrentTemplate();
+    if (!template) return;
+
+    const updatedSystems = template.systems.map((sys) => {
+      if (sys.id === systemId) {
+        let updatedRows = sys.dataRows.map((row) =>
+          row.id === rowId ? { ...row, [field]: value } : row
+        );
+
+        if (sys.name === "PRINT LABEL" && field === "type") {
+          updatedRows.sort((a, b) => {
+            const order = { BOX: 1, BAG: 2, MATCHING: 3 };
+            const aOrder = a.type ? order[a.type] : 999;
+            const bOrder = b.type ? order[b.type] : 999;
+            return aOrder - bOrder;
+          });
         }
-        return sys;
-      })
-    );
+
+        return { ...sys, dataRows: updatedRows };
+      }
+      return sys;
+    });
+
+    handleSystemsChange(updatedSystems);
   };
 
-  const toggleSystemVisibility = (systemId: string) => {
-    setSystems(
-      systems.map((sys) =>
-        sys.id === systemId ? { ...sys, isVisible: !sys.isVisible } : sys
-      )
-    );
+  const handleSaveSettings = () => {
+    // Settings are auto-saved via useEffect
+    alert("Settings saved successfully!");
   };
 
-  const handleVerifyPassword = () => {
-    if (templatePassword === TEMPLATE_PASSWORD) {
-      setIsPasswordVerified(true);
-      setErrorMessage("");
-    } else {
-      setErrorMessage("Incorrect password! Please try again.");
-      setTemplatePassword("");
+  const handleResetSettings = () => {
+    const template = getCurrentTemplate();
+    if (!template) return;
+
+    if (confirm(`Reset settings for template "${template.name}" to default?`)) {
+      setTemplates(
+        templates.map((t) =>
+          t.id === selectedConfigTemplateId
+            ? {
+                ...t,
+                labels: {
+                  itemDataLabel: "ITEM DATA",
+                  itemQRLabel: "QR CODE",
+                  lotDataLabel: "LOT DATA",
+                  lotQRLabel: "QR CODE",
+                  qtyDataLabel: "Q'TY DATA",
+                  qtyQRLabel: "QR CODE",
+                },
+                itemDataCell: "BF3",
+                itemQRCell: "A4",
+                lotDataCell: "BF3",
+                lotQRCell: "L4",
+                qtyDataCell: "BF3",
+                qtyQRCell: "W4",
+                systems: getDefaultSystems(),
+              }
+            : t
+        )
+      );
+      alert("Settings reset to default!");
     }
   };
 
-  const handleCloseTemplateDialog = () => {
-    setTemplateFile(null);
-    setIsTemplateDialogOpen(false);
-    setTemplatePassword("");
-    setIsPasswordVerified(false);
-    setErrorMessage("");
+  const handleDeleteTemplate = (templateId: string) => {
+    setTemplates(templates.filter((t) => t.id !== templateId));
+    if (selectedConfigTemplateId === templateId) {
+      setSelectedConfigTemplateId(
+        templates.length > 1 ? templates[0].id : null
+      );
+    }
   };
 
+  const handleEditTemplate = () => {
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEditedTemplate = (templateId: string, newWorkbook: any) => {
+    setTemplates(
+      templates.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              workbook: newWorkbook,
+              uploadedAt: new Date().toISOString(),
+            }
+          : t
+      )
+    );
+
+    const template = templates.find((t) => t.id === templateId);
+    if (template) {
+      alert(`Template "${template.name}" updated successfully!`);
+    }
+  };
+
+  const handleDeleteSelectedTemplate = (templateId: string) => {
+    const template = templates.find((t) => t.id === templateId);
+    if (!template) return;
+
+    const newTemplates = templates.filter((t) => t.id !== templateId);
+    setTemplates(newTemplates);
+
+    // Select first template if available, otherwise null
+    if (newTemplates.length > 0) {
+      setSelectedConfigTemplateId(newTemplates[0].id);
+    } else {
+      setSelectedConfigTemplateId(null);
+      localStorage.removeItem("qrGeneratorTemplates");
+    }
+
+    alert(`Template "${template.name}" has been deleted.`);
+  };
+
+  const handleGenerateQRCode = async () => {
+    if (templates.length === 0) {
+      alert("Please upload a template first");
+      return;
+    }
+
+    if (dataRows.length === 0) {
+      alert("Please enter data first");
+      return;
+    }
+
+    // Here you would implement the QR code generation logic
+    alert("QR Code generation will be implemented in the next step!");
+  };
+
+  const handleDownloadExample = () => {
+    // Create example workbook
+    const wb = XLSX.utils.book_new();
+
+    // Create example worksheet with sample data and QR code positions
+    const wsData = [
+      // Headers and sample data
+      [
+        "",
+        "",
+        "",
+        "QR Position A4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "QR Position L4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "QR Position W4",
+      ],
+      [
+        "",
+        "",
+        "ITEM DATA (BF3)",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        "",
+        "",
+        "Sample Item Code",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        "",
+        "",
+        "LOT: 2024-001",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        "",
+        "",
+        "QTY: 100",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        "",
+        "",
+        "PROMOS SYSTEM DATA",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      // More rows to demonstrate structure
+    ];
+
+    // Add more rows to reach typical positions
+    for (let i = wsData.length; i < 60; i++) {
+      wsData.push([""]);
+    }
+
+    // Add PROMOS SYSTEM data at row 54-57
+    wsData[53] = [
+      "ITEM CODE: SAMPLE-001",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "PROMOS QR Position (AF4)",
+    ];
+    wsData[54] = ["LOT: 2024-001"];
+    wsData[55] = ["ORDER NO: ORD-12345"];
+    wsData[56] = ["ITEM APS: APS-001"];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Set column widths
+    ws["!cols"] = [
+      { wch: 5 }, // A
+      { wch: 5 }, // B
+      { wch: 20 }, // C
+      { wch: 15 }, // D - QR Position A4
+      { wch: 5 }, // E
+      { wch: 5 }, // F
+      { wch: 5 }, // G
+      { wch: 5 }, // H
+      { wch: 5 }, // I
+      { wch: 5 }, // J
+      { wch: 5 }, // K
+      { wch: 15 }, // L - QR Position L4
+      { wch: 5 }, // M
+    ];
+
+    // Add styling to important cells
+    const cellStyle = {
+      font: { bold: true },
+      fill: { fgColor: { rgb: "FFFF00" } },
+    };
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+
+    // Create instructions sheet
+    const instructionsData = [
+      ["MULTI-SYSTEM QR GENERATOR - EXAMPLE TEMPLATE"],
+      [""],
+      ["IMPORTANT POSITIONS:"],
+      [""],
+      ["1. ITEM DATA: Cell BF3 - Contains main item information"],
+      ["2. QR CODE POSITIONS:"],
+      ["   - Item QR: A4"],
+      ["   - Lot QR: L4"],
+      ["   - Qty QR: W4"],
+      ["   - Promos QR: AF4"],
+      [""],
+      ["3. PROMOS SYSTEM (Rows 54-57):"],
+      ["   - ITEM CODE: A54"],
+      ["   - LOT: A55"],
+      ["   - ORDER NO: A56"],
+      ["   - ITEM APS: A57"],
+      [""],
+      ["4. DATA ROWS:"],
+      ["   - PRINT LABEL: Supports BOX, BAG, MATCHING types"],
+      ["   - ATTACH LABEL: Regular data rows"],
+      ["   - BOXPACK: Regular data rows"],
+      [""],
+      ["INSTRUCTIONS:"],
+      ["1. Upload this template using the UPLOAD TEMPLATE button"],
+      ["2. Configure settings if needed using CONFIGURE SETTING"],
+      ["3. Create a data file with your actual data"],
+      ["4. Select the data file and generate QR codes"],
+      [""],
+      ["NOTE: This is a simplified example. Your actual template"],
+      ["may have different cell positions and more complex layouts."],
+    ];
+
+    const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
+    wsInstructions["!cols"] = [{ wch: 60 }];
+    XLSX.utils.book_append_sheet(wb, wsInstructions, "Instructions");
+
+    // Download the file
+    XLSX.writeFile(wb, "QR_Generator_Example_Template.xlsx");
+
+    alert("Example template downloaded! Check your downloads folder.");
+  };
+
+  const handleDataFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const data = event.target?.result;
+      const workbook = XLSX.read(data, { type: "binary" });
+
+      // Get first sheet
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+        header: 1,
+      }) as any[][];
+
+      // Convert Excel data to DataRow format
+      // Assuming data starts from row 2 (row 1 is headers)
+      const newDataRows: DataRow[] = [];
+
+      for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || row.length === 0) continue;
+
+        newDataRows.push({
+          id: `${Date.now()}_${i}`,
+          orderNo: row[0]?.toString() || "",
+          itemCode: row[1]?.toString() || "",
+          externalLot: row[2]?.toString() || "",
+          materialCode: row[3]?.toString() || "",
+          internalLot: row[4]?.toString() || "",
+          qty: row[5]?.toString() || "",
+        });
+      }
+
+      setDataRows(newDataRows);
+    };
+
+    reader.readAsBinaryString(file);
+    e.target.value = ""; // Reset input
+  };
+
+  const currentTemplate = getCurrentTemplate();
+
   return (
-    <div className="min-h-screen bg-blue-50 p-6 flex items-center justify-center">
-      <div className="max-w-6xl w-full">
-        {/* Header - Centered Title */}
-        <div className="text-center mb-20">
-          <h1 className="inline-block text-3xl font-bold bg-white px-8 py-4 rounded-lg shadow-lg border-2 border-indigo-200 text-indigo-900">
+    <div className="min-h-screen bg-blue-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mt-3 mb-8">
+          <h1 className="inline-block text-2xl font-bold bg-white px-4 py-1 rounded-lg  border-2 border-indigo-200 text-indigo-900">
             MULTI-SYSTEM QR CODE GENERATOR
           </h1>
         </div>
-        {/* Template and Configure Setting Buttons */}
-        <div className="flex justify-start gap-4 mb-6">
-          <TemplateButton
-            onClick={() => {
-              setTemplateFile(null); // reset file
-              setTemplateWorkbook(null); // reset workbook
-              setTemplatePassword(""); // reset password
-              setIsPasswordVerified(false); // reset password verification status
-              setErrorMessage(""); // reset error message
-              setIsTemplateDialogOpen(true);
-            }}
-          />
 
-          <ConfigureSettingButton onClick={() => setIsConfigDialogOpen(true)} />
+        {/* Sections 1 & 2: TEMPLATE and SELECTOR side by side */}
+        <div className="grid grid-cols-4 gap-6 mb-4">
+          {/* Section 1: TEMPLATE */}
+          <div className="col-span-1 bg-white rounded-xl  border-2 border-indigo-200 p-4">
+            <h2 className="text-base font-bold text-indigo-900 mb-2">
+              TEMPLATE
+            </h2>
+            <div className="space-y-3">
+              <TemplateButton onClick={() => setIsUploadDialogOpen(true)} />
+              <EditTemplateButton
+                onClick={handleEditTemplate}
+                disabled={!selectedConfigTemplateId}
+              />
+              <DeleteTemplateButton
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={!selectedConfigTemplateId}
+              />
+            </div>
+          </div>
+
+          {/* Section 2: SELECTOR */}
+          <div className="col-span-3 bg-white rounded-xl  border-2 border-indigo-200 p-4">
+            <div className="space-y-4">
+              <div>
+                <label className="text-base font-bold text-indigo-900 mb-6 block">
+                  SELECT TEMPLATE
+                </label>
+                <TemplateDropdown
+                  templates={templates}
+                  selectedTemplateId={selectedConfigTemplateId}
+                  onTemplateChange={handleTemplateChange}
+                />
+              </div>
+              <div className="flex justify-end">
+                <ConfigureSettingButton
+                  onClick={() => setIsConfigDialogOpen(true)}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Template Upload Dialog */}
-        <TemplateDialog
-          isOpen={isTemplateDialogOpen}
-          onClose={handleCloseTemplateDialog}
-          isPasswordVerified={isPasswordVerified}
-          templatePassword={templatePassword}
-          onPasswordChange={setTemplatePassword}
-          onVerifyPassword={handleVerifyPassword}
-          onFileSelect={handleTemplateFileSelect}
-          errorMessage={errorMessage}
-          handleClearFile={handleClearFile}
-          templateFile={templateFile}
-        />
-
-        {/* File Selection */}
-        {/* <div className="mb-6">
-          {templateFile ? (
-            <div className="bg-white rounded-lg shadow-md border border-indigo-300 p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-indigo-600" />
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {templateFile.name}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {(templateFile.size / 1024).toFixed(2)} KB
-                  </p>
-                </div>
+        {/* Section 3: EXCEL SHEET PREVIEW */}
+        <div className="bg-white rounded-xl border-2 border-indigo-200 p-4 mb-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-3">
+              {dataRows.length > 0 && (
+                <p className="text-sm text-gray-600">
+                  <span className="font-semibold">{dataRows.length}</span> rows
+                  loaded
+                </p>
+              )}
+              <div className="flex items-center gap-2 ml-auto">
+                <label className="bg-green-600 text-white px-3 py-2 rounded-lg shadow cursor-pointer hover:from-green-700 hover:to-green-800 transition flex items-center gap-2 text-xs font-semibold">
+                  <Upload className="w-3 h-3" />
+                  LOAD FROM EXCEL
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".xlsx,.xls"
+                    onChange={handleDataFileSelect}
+                  />
+                </label>
+                {dataRows.length > 0 && (
+                  <button
+                    onClick={() => setDataRows([])}
+                    className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition flex items-center gap-2 text-xs font-semibold"
+                  >
+                    <X className="w-4 h-4" />
+                    CLEAR ALL
+                  </button>
+                )}
               </div>
-              <button
-                onClick={handleClearFile}
-                className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition flex items-center justify-center"
-                title="Remove file"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
-          ) : (
-            <label className="bg-white px-6 py-4 rounded-lg shadow-md border-2 border-dashed border-indigo-300 cursor-pointer hover:bg-indigo-50 transition flex items-center justify-center gap-2 text-indigo-900 font-medium">
-              <Upload className="w-5 h-5" />
-              SELECT FILE
-              <input
-                type="file"
-                className="hidden"
-                accept=".xlsx,.xls"
-                onChange={handleFileSelect}
-              />
-            </label>
-          )}
-        </div> */}
 
-        {/* Import and Generate Buttons */}
-        <div className="flex justify-end gap-4 mb-6">
+            {/* Always show Data Grid */}
+            <ExcelStyleGrid data={dataRows} onDataChange={setDataRows} />
+          </div>
+        </div>
+
+        {/* Generate Button */}
+        <div className="flex justify-center">
           <GenerateQRButton onClick={handleGenerateQRCode} />
         </div>
 
+        {/* Template Upload Dialog */}
+        <TemplateUploadDialog
+          isOpen={isUploadDialogOpen}
+          onClose={() => setIsUploadDialogOpen(false)}
+          onUploadTemplate={handleUploadTemplate}
+        />
+
         {/* Configure Setting Dialog */}
-        <ConfigureSettingDialog
-          isOpen={isConfigDialogOpen}
-          onClose={() => setIsConfigDialogOpen(false)}
-          labels={labels}
-          onLabelsChange={setLabels}
-          itemDataCell={itemDataCell}
-          itemQRCell={itemQRCell}
-          lotDataCell={lotDataCell}
-          lotQRCell={lotQRCell}
-          qtyDataCell={qtyDataCell}
-          qtyQRCell={qtyQRCell}
-          onItemDataCellChange={setItemDataCell}
-          onItemQRCellChange={setItemQRCell}
-          onLotDataCellChange={setLotDataCell}
-          onLotQRCellChange={setLotQRCell}
-          onQtyDataCellChange={setQtyDataCell}
-          onQtyQRCellChange={setQtyQRCell}
-          systems={systems}
-          onAddDataRow={addDataRow}
-          onRemoveDataRow={removeDataRow}
-          onUpdateDataRow={updateDataRow}
-          onSaveSettings={handleSaveSettings}
-          onResetSettings={handleResetSettings}
+        {currentTemplate && (
+          <ConfigureSettingDialog
+            isOpen={isConfigDialogOpen}
+            onClose={() => setIsConfigDialogOpen(false)}
+            labels={currentTemplate.labels}
+            onLabelsChange={handleLabelsChange}
+            itemDataCell={currentTemplate.itemDataCell}
+            itemQRCell={currentTemplate.itemQRCell}
+            lotDataCell={currentTemplate.lotDataCell}
+            lotQRCell={currentTemplate.lotQRCell}
+            qtyDataCell={currentTemplate.qtyDataCell}
+            qtyQRCell={currentTemplate.qtyQRCell}
+            onItemDataCellChange={(v) => handleCellChange("itemDataCell", v)}
+            onItemQRCellChange={(v) => handleCellChange("itemQRCell", v)}
+            onLotDataCellChange={(v) => handleCellChange("lotDataCell", v)}
+            onLotQRCellChange={(v) => handleCellChange("lotQRCell", v)}
+            onQtyDataCellChange={(v) => handleCellChange("qtyDataCell", v)}
+            onQtyQRCellChange={(v) => handleCellChange("qtyQRCell", v)}
+            systems={currentTemplate.systems}
+            onAddDataRow={addDataRow}
+            onAddTypedDataRow={addTypedDataRow}
+            onRemoveDataRow={removeDataRow}
+            onUpdateDataRow={updateDataRow}
+            onSaveSettings={handleSaveSettings}
+            onResetSettings={handleResetSettings}
+            templates={templates}
+            selectedTemplateId={selectedConfigTemplateId}
+            onTemplateChange={handleTemplateChange}
+          />
+        )}
+
+        {/* Edit Template Dialog */}
+        <EditTemplateDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          templates={templates}
+          onSave={handleSaveEditedTemplate}
+        />
+
+        {/* Delete Template Dialog */}
+        <DeleteTemplateDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          templates={templates}
+          onDelete={handleDeleteSelectedTemplate}
         />
       </div>
     </div>
