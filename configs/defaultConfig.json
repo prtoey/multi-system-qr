@@ -1,0 +1,53 @@
+{
+  "globalRows": [
+    {
+      "id": "item",
+      "itemDataLabel": "ITEM",
+      "itemDataCell": "BF3",
+      "itemQRCell": "A4"
+    },
+    {
+      "id": "lot",
+      "itemDataLabel": "LOT",
+      "itemDataCell": "BF3",
+      "itemQRCell": "L4"
+    },
+    {
+      "id": "qty",
+      "itemDataLabel": "Q'TY",
+      "itemDataCell": "BF3",
+      "itemQRCell": "W4"
+    }
+  ],
+  "systems": [
+    {
+      "id": "1",
+      "name": "PROMOS SYSTEM",
+      "fields": [
+        { "label": "ITEM CODE", "cell": "A54" },
+        { "label": "LOT", "cell": "A55" },
+        { "label": "ORDER NO.", "cell": "A56" },
+        { "label": "ITEM APS", "cell": "A57" }
+      ],
+      "dataRows": []
+    },
+    {
+      "id": "2",
+      "name": "PRINT LABEL",
+      "fields": [],
+      "dataRows": []
+    },
+    {
+      "id": "3",
+      "name": "ATTACH LABEL",
+      "fields": [],
+      "dataRows": []
+    },
+    {
+      "id": "4",
+      "name": "BOXPACK",
+      "fields": [],
+      "dataRows": []
+    }
+  ]
+}

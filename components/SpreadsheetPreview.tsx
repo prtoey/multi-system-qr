@@ -1,5 +1,5 @@
-import { FileSpreadsheet } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface SpreadsheetPreviewProps {
   workbook: any;
@@ -8,17 +8,19 @@ interface SpreadsheetPreviewProps {
   maxCols?: number;
 }
 
-export function SpreadsheetPreview({ 
-  workbook, 
-  sheetName, 
+export function SpreadsheetPreview({
+  workbook,
+  sheetName,
   maxRows = 20,
-  maxCols = 10 
+  maxCols = 10,
 }: SpreadsheetPreviewProps) {
   if (!workbook) {
     return null;
   }
 
-  const sheet = sheetName ? workbook.Sheets[sheetName] : workbook.Sheets[workbook.SheetNames[0]];
+  const sheet = sheetName
+    ? workbook.Sheets[sheetName]
+    : workbook.Sheets[workbook.SheetNames[0]];
   const currentSheetName = sheetName || workbook.SheetNames[0];
 
   if (!sheet) {
@@ -30,15 +32,15 @@ export function SpreadsheetPreview({
   }
 
   // Get the range of the sheet
-  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
-  
+  const range = XLSX.utils.decode_range(sheet["!ref"] || "A1");
+
   // Limit the display range
   const displayRange = {
     s: { r: range.s.r, c: range.s.c },
-    e: { 
+    e: {
       r: Math.min(range.e.r, range.s.r + maxRows - 1),
-      c: Math.min(range.e.c, range.s.c + maxCols - 1)
-    }
+      c: Math.min(range.e.c, range.s.c + maxCols - 1),
+    },
   };
 
   // Generate column headers (A, B, C, ...)
@@ -48,7 +50,10 @@ export function SpreadsheetPreview({
   }
 
   // Generate rows with data
-  const rows: Array<{ rowNum: number; cells: Array<{ col: string; value: any }> }> = [];
+  const rows: Array<{
+    rowNum: number;
+    cells: Array<{ col: string; value: any }>;
+  }> = [];
   for (let r = displayRange.s.r; r <= displayRange.e.r; r++) {
     const rowCells: Array<{ col: string; value: any }> = [];
     for (let c = displayRange.s.c; c <= displayRange.e.c; c++) {
@@ -56,7 +61,7 @@ export function SpreadsheetPreview({
       const cell = sheet[cellAddress];
       rowCells.push({
         col: XLSX.utils.encode_col(c),
-        value: cell ? cell.v : ''
+        value: cell ? cell.v : "",
       });
     }
     rows.push({ rowNum: r + 1, cells: rowCells });
@@ -65,11 +70,13 @@ export function SpreadsheetPreview({
   return (
     <div className="bg-white border-2 border-indigo-300 rounded-lg shadow-lg overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-4 py-3 flex items-center gap-3">
+      <div className="bg-linear-to-r from-indigo-600 to-blue-600 text-white px-4 py-3 flex items-center gap-3">
         <FileSpreadsheet className="w-5 h-5" />
         <div>
           <div className="font-bold">Data Preview</div>
-          <div className="text-xs text-indigo-100">Sheet: {currentSheetName}</div>
+          <div className="text-xs text-indigo-100">
+            Sheet: {currentSheetName}
+          </div>
         </div>
       </div>
 
@@ -93,7 +100,10 @@ export function SpreadsheetPreview({
           </thead>
           <tbody>
             {rows.map((row, idx) => (
-              <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+              <tr
+                key={idx}
+                className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+              >
                 <td className="border border-gray-300 px-3 py-2 text-center text-sm font-semibold text-gray-600 bg-blue-50">
                   {row.rowNum}
                 </td>
@@ -102,7 +112,7 @@ export function SpreadsheetPreview({
                     key={cellIdx}
                     className="border border-gray-300 px-3 py-2 text-sm text-gray-800"
                   >
-                    {cell.value !== '' ? String(cell.value) : ''}
+                    {cell.value !== "" ? String(cell.value) : ""}
                   </td>
                 ))}
               </tr>
@@ -114,7 +124,10 @@ export function SpreadsheetPreview({
       {/* Footer Info */}
       {(range.e.r > displayRange.e.r || range.e.c > displayRange.e.c) && (
         <div className="bg-indigo-50 border-t border-indigo-200 px-4 py-2 text-xs text-indigo-700">
-          Showing {displayRange.e.r - displayRange.s.r + 1} of {range.e.r - range.s.r + 1} rows, {displayRange.e.c - displayRange.s.c + 1} of {range.e.c - range.s.c + 1} columns
+          Showing {displayRange.e.r - displayRange.s.r + 1} of{" "}
+          {range.e.r - range.s.r + 1} rows,{" "}
+          {displayRange.e.c - displayRange.s.c + 1} of{" "}
+          {range.e.c - range.s.c + 1} columns
         </div>
       )}
     </div>

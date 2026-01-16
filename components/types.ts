@@ -1,18 +1,22 @@
-export interface DataField {
-  id: string;
-  itemDataCell: string;
-  itemQRCell: string;
-  itemDataLabel?: string;
-  itemQRLabel?: string;
-  type?: 'BOX' | 'BAG' | 'MATCHING'; // For PRINT LABEL system
-}
-
-export interface SystemConfig {
+export interface TemplateConfig {
   id: string;
   name: string;
-  fields: { label: string; cell: string }[];
-  dataRows: DataField[];
-  isVisible?: boolean;
+  uploadedAt: string;
+  workbook: any;
+  labels: LabelConfig;
+  globalRows: GlobalDataRow[];
+  itemDataCell: string;
+  itemQRCell: string;
+  lotDataCell: string;
+  lotQRCell: string;
+  qtyDataCell: string;
+  qtyQRCell: string;
+  systems: SystemConfig[];
+}
+
+export interface TemplateOption {
+  id: string;
+  name: string;
 }
 
 export interface LabelConfig {
@@ -24,19 +28,28 @@ export interface LabelConfig {
   qtyQRLabel: string;
 }
 
-export interface TemplateConfig {
+export interface GlobalDataRow {
+  id: string;
+  itemDataLabel?: string;
+  itemDataCell?: string;
+  itemQRCell?: string;
+}
+
+export interface SystemConfig {
   id: string;
   name: string;
-  uploadedAt: string;
-  workbook: any;
-  labels: LabelConfig;
+  fields: { label: string; cell: string }[];
+  dataRows: DataField[];
+  isVisible?: boolean;
+}
+
+export interface DataField {
+  id: string;
   itemDataCell: string;
   itemQRCell: string;
-  lotDataCell: string;
-  lotQRCell: string;
-  qtyDataCell: string;
-  qtyQRCell: string;
-  systems: SystemConfig[];
+  itemDataLabel?: string;
+  itemQRLabel?: string;
+  type?: "BAG" | "BOX" | "MATCHING";
 }
 
 export interface DataRow {

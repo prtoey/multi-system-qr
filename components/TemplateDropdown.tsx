@@ -1,8 +1,8 @@
 import { FileSpreadsheet, Trash2 } from "lucide-react";
-import { TemplateConfig } from "../components/types";
+import { TemplateOption } from "../components/types";
 
 interface TemplateDropdownProps {
-  templates: TemplateConfig[];
+  templates: TemplateOption[];
   selectedTemplateId: string | null;
   onTemplateChange: (templateId: string) => void;
   onDeleteTemplate?: (templateId: string) => void;
@@ -19,8 +19,8 @@ export function TemplateDropdown({
   if (templates.length === 0) {
     return (
       <div className="flex items-center gap-2 text-gray-500">
-        <FileSpreadsheet className="w-5 h-5" />
-        <span className="text-sm font-medium">No templates available</span>
+        <FileSpreadsheet className="w-12 h-12 text-gray-700 bg-gray-100 rounded-lg p-3" />
+        <span className="text-md font-medium">No templates available</span>
       </div>
     );
   }
@@ -40,7 +40,7 @@ export function TemplateDropdown({
 
   return (
     <div className="flex items-center gap-2">
-      <FileSpreadsheet className="w-12 h-12 text-green-700 bg-green-100 rounded-lg p-2" />
+      <FileSpreadsheet className="w-12 h-12 text-green-700 bg-green-100 rounded-lg p-3" />
       <select
         value={selectedTemplateId || ""}
         onChange={(e) => onTemplateChange(e.target.value)}
