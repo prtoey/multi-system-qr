@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { X, Save, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
+import AlertDialog from "../components/AlertDialog";
 
 interface Template {
   name: string;
@@ -24,6 +25,7 @@ export function EditTemplateDialog({
   const [workbook, setWorkbook] = useState<any>(null);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
+  const [openError, setOpenError] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -32,6 +34,7 @@ export function EditTemplateDialog({
       setSelectedTemplateId("");
       setWorkbook(null);
       setFileName("");
+      setError("");
     }
   }, [isOpen]);
 
@@ -41,7 +44,7 @@ export function EditTemplateDialog({
     if (password === "admin123") {
       setIsPasswordVerified(true);
     } else {
-      alert("Incorrect password!");
+      setOpenError(true);
       setPassword("");
     }
   };
@@ -126,7 +129,7 @@ export function EditTemplateDialog({
             />
             <button
               onClick={handlePasswordSubmit}
-              className="w-full bg-indigo-600 text-white py-2 rounded-lg"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
             >
               VERIFY PASSWORD
             </button>
@@ -182,6 +185,12 @@ export function EditTemplateDialog({
           </div>
         )}
       </div>
+      <AlertDialog
+        isOpen={openError}
+        title="Error"
+        message="Incorrect password!"
+        onClose={() => setOpenError(false)}
+      />
     </div>
   );
 }

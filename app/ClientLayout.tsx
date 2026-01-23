@@ -3,7 +3,6 @@
 import { Upload, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-
 import {
   TemplateOption,
   GlobalDataRow,
@@ -22,30 +21,38 @@ import { DeleteTemplateDialog } from "../components/DeleteTemplateDialog";
 import { ConfigureSettingDialog } from "../components/ConfigureSettingDialog";
 import { TemplateDropdown } from "../components/TemplateDropdown";
 import { ExcelStyleGrid } from "../components/ExcelStyleGrid";
+import AlertDialog from "../components/AlertDialog";
+import ExcelValidationDialog, {
+  ExcelValidationError,
+} from "../components/ExcelValidationDialog";
 
 export default function ClientLayout() {
-  /* ================= TEMPLATE ================= */
+  /* TEMPLATE */
   const [templateOptions, setTemplateOptions] = useState<TemplateOption[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
-    null
+    null,
   );
 
-  /* ================= CONFIG (FROM BACKEND) ================= */
+  /* CONFIG */
   const [globalRows, setGlobalRows] = useState<GlobalDataRow[]>([]);
   const [systems, setSystems] = useState<SystemConfig[]>([]);
+  const [validationErrors, setValidationErrors] = useState<
+    ExcelValidationError[]
+  >([]);
+  const [validationOpen, setValidationOpen] = useState(false);
 
-  /* ================= DATA ================= */
+  /* DATA */
   const [dataRows, setDataRows] = useState<DataRow[]>([]);
 
-  /* ================= UI ================= */
+  /* UI */
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [openAlert, setOpenAlert] = useState(false);
+  const [openError, setOpenError] = useState(false);
 
-  /* =====================================================
-     TEMPLATE LIST
-     ===================================================== */
+  /* TEMPLATE LIST */
   const fetchTemplateOptions = async () => {
     const res = await fetch("/api/templates/getName", { cache: "no-store" });
     const data = await res.json();
@@ -71,9 +78,7 @@ export default function ClientLayout() {
     fetchTemplateOptions();
   }, []);
 
-  /* =====================================================
-     LOAD CONFIG (backend fallback default)
-     ===================================================== */
+  /* EXCEL LOAD */
   const loadTemplateConfig = async (templateId: string) => {
     const res = await fetch(`/api/templates/config/${templateId}`, {
       cache: "no-store",
@@ -90,9 +95,7 @@ export default function ClientLayout() {
     }
   }, [selectedTemplateId]);
 
-  /* =====================================================
-     CONFIG MUTATORS
-     ===================================================== */
+  /* CONFIG MUTATORS */
   const addGlobalRow = () =>
     setGlobalRows((prev) => [
       ...prev,
@@ -110,11 +113,30 @@ export default function ClientLayout() {
   const updateGlobalRow = (
     rowId: string,
     field: "itemDataLabel" | "itemDataCell" | "itemQRCell",
-    value: string
+    value: string,
   ) =>
     setGlobalRows((prev) =>
-      prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r))
+      prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)),
     );
+
+  const updateSystemFieldCell = (
+    systemId: string,
+    fieldIndex: number,
+    value: string,
+  ) => {
+    setSystems((prev) =>
+      prev.map((sys) =>
+        sys.id === systemId
+          ? {
+              ...sys,
+              fields: sys.fields.map((f, i) =>
+                i === fieldIndex ? { ...f, cell: value } : f,
+              ),
+            }
+          : sys,
+      ),
+    );
+  };
 
   const addDataRow = (systemId: string) =>
     setSystems((prev) =>
@@ -131,8 +153,8 @@ export default function ClientLayout() {
                 },
               ],
             }
-          : sys
-      )
+          : sys,
+      ),
     );
 
   const addTypedDataRow = (systemId: string) => {
@@ -164,8 +186,8 @@ export default function ClientLayout() {
                 },
               ],
             }
-          : sys
-      )
+          : sys,
+      ),
     );
   };
 
@@ -174,8 +196,8 @@ export default function ClientLayout() {
       prev.map((sys) =>
         sys.id === systemId
           ? { ...sys, dataRows: sys.dataRows.filter((r) => r.id !== rowId) }
-          : sys
-      )
+          : sys,
+      ),
     );
 
   const updateDataRow = (
@@ -187,7 +209,7 @@ export default function ClientLayout() {
       | "itemDataLabel"
       | "itemQRLabel"
       | "type",
-    value: string
+    value: string,
   ) =>
     setSystems((prev) =>
       prev.map((sys) =>
@@ -195,19 +217,99 @@ export default function ClientLayout() {
           ? {
               ...sys,
               dataRows: sys.dataRows.map((r) =>
-                r.id === rowId ? { ...r, [field]: value } : r
+                r.id === rowId ? { ...r, [field]: value } : r,
               ),
             }
-          : sys
-      )
+          : sys,
+      ),
     );
 
-  /* =====================================================
-     SAVE CONFIG
-     ===================================================== */
+  /* Validate Excel Cell */
+  const isValidExcelCell = (cell?: string) => {
+    if (!cell) return false;
+    try {
+      const decoded = XLSX.utils.decode_cell(cell.toUpperCase());
+      return decoded.r >= 0 && decoded.c >= 0;
+    } catch {
+      return false;
+    }
+  };
+
+  /* SAVE CONFIG */
   const handleSaveSettings = async () => {
     if (!selectedTemplateId) return;
 
+    const errors: ExcelValidationError[] = [];
+
+    // GLOBAL
+    globalRows.forEach((row, i) => {
+      if (!isValidExcelCell(row.itemDataCell)) {
+        errors.push({
+          systemName: "MAIN",
+          rowIndex: i + 1,
+          field: "DATA",
+          cell: row.itemDataCell ?? "",
+          label: row.itemDataLabel,
+        });
+      }
+      if (!isValidExcelCell(row.itemQRCell)) {
+        errors.push({
+          systemName: "MAIN",
+          rowIndex: i + 1,
+          field: "QR",
+          cell: row.itemQRCell ?? "",
+          label: row.itemDataLabel,
+        });
+      }
+    });
+
+    // PROMOS SYSTEM (fields[])
+    systems.forEach((system) => {
+      if (system.fields.length > 0) {
+        system.fields.forEach((field, i) => {
+          if (!isValidExcelCell(field.cell)) {
+            errors.push({
+              systemName: "PROMOS",
+              rowIndex: i + 1,
+              field: field.label,
+              cell: field.cell,
+              label: field.label,
+            });
+          }
+        });
+      }
+    });
+
+    // SYSTEM
+    systems.forEach((system) => {
+      system.dataRows.forEach((row, i) => {
+        if (!isValidExcelCell(row.itemDataCell)) {
+          errors.push({
+            systemName: system.name,
+            rowIndex: i + 1,
+            field: "DATA",
+            cell: row.itemDataCell,
+          });
+        }
+        if (!isValidExcelCell(row.itemQRCell)) {
+          errors.push({
+            systemName: system.name,
+            rowIndex: i + 1,
+            field: "QR",
+            cell: row.itemQRCell,
+          });
+        }
+      });
+    });
+
+    // show table dialog
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setValidationOpen(true);
+      return;
+    }
+
+    // save
     await fetch("/api/templates/config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -217,57 +319,119 @@ export default function ClientLayout() {
       }),
     });
 
-    alert("Settings saved successfully!");
+    setOpenAlert(true);
+    setIsConfigDialogOpen(false);
   };
 
-  /* =====================================================
-     EXCEL LOAD
-     ===================================================== */
+  /* EXCEL LOAD */
   const handleDataFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const wb = XLSX.read(event.target?.result, { type: "binary" });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 
-      const parsed: DataRow[] = [];
-      for (let i = 1; i < rows.length; i++) {
-        if (!rows[i]) continue;
-        parsed.push({
-          id: `${Date.now()}_${i}`,
-          orderNo: rows[i][0] ?? "",
-          itemCode: rows[i][1] ?? "",
-          externalLot: rows[i][2] ?? "",
-          materialCode: rows[i][3] ?? "",
-          internalLot: rows[i][4] ?? "",
-          qty: rows[i][5] ?? "",
-        });
+    reader.onload = (event) => {
+      try {
+        const buffer = event.target?.result;
+        if (!buffer) return;
+
+        const data = new Uint8Array(buffer as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          blankrows: false,
+        }) as any[][];
+
+        const parsed: DataRow[] = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row) continue;
+
+          const hasData = row.some(
+            (cell) => cell !== undefined && String(cell).trim() !== "",
+          );
+          if (!hasData) continue;
+
+          parsed.push({
+            id: `${Date.now()}_${i}_${Math.random()}`,
+            orderNo: String(row[0] ?? "").trim(),
+            itemCode: String(row[1] ?? "").trim(),
+            externalLot: String(row[2] ?? "").trim(),
+            materialCode: String(row[3] ?? "").trim(),
+            internalLot: String(row[4] ?? "").trim(),
+            qty: String(row[5] ?? "").trim(),
+          });
+        }
+
+        setDataRows(parsed);
+      } catch (err) {
+        console.error("Excel read error:", err);
       }
-      setDataRows(parsed);
     };
 
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
 
-  /* =====================================================
-     TEMPLATE DIALOG HANDLERS
-     ===================================================== */
+  /* TEMPLATE DIALOG HANDLERS */
   const handleUploadTemplate = () => {
     fetchTemplateOptions();
   };
 
-  const handleDeleteSelectedTemplate = () => {
-    setSelectedTemplateId(null);
+  const handleDeleteTemplate = async (templateId: string) => {
+    const res = await fetch(`/api/templates/delete/${templateId}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      setOpenError(true);
+      return;
+    }
+
+    const data = await res.json();
+    handleDeleteSelectedTemplate(templateId);
+  };
+
+  const handleDeleteSelectedTemplate = (deletedId: string) => {
+    setSelectedTemplateId((prev) => (prev === deletedId ? null : prev));
     fetchTemplateOptions();
   };
 
-  /* =====================================================
-     RENDER (UNCHANGED UI)
-     ===================================================== */
+  async function handleGenerateExcel() {
+    const res = await fetch("/api/generate-excel", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        templateId: selectedTemplateId,
+        rows: dataRows,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      alert(err);
+      return;
+    }
+
+    const blob = await res.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = `${selectedTemplateId}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="min-h-screen bg-blue-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -305,25 +469,32 @@ export default function ClientLayout() {
               onTemplateChange={setSelectedTemplateId}
             />
             <div className="flex justify-end mt-4">
-              <ConfigureSettingButton
-                onClick={() => setIsConfigDialogOpen(true)}
-              />
+              {templateOptions.length > 0 && (
+                <ConfigureSettingButton
+                  onClick={() => setIsConfigDialogOpen(true)}
+                />
+              )}
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-xl border-2 border-indigo-200 p-4 mb-4">
           <div className="flex justify-end gap-2 mb-2">
-            <label className="bg-green-600 text-white px-3 py-2 rounded-lg shadow cursor-pointer hover:from-green-700 hover:to-green-800 transition flex items-center gap-2 text-xs font-semibold">
+            <label
+              htmlFor="excel-upload"
+              className="bg-green-600 text-white px-3 py-2 rounded-lg shadow cursor-pointer hover:bg-green-700 transition flex items-center gap-2 text-xs font-semibold"
+            >
               <Upload className="w-3 h-3" />
               LOAD FROM EXCEL
-              <input
-                type="file"
-                className="hidden"
-                accept=".xlsx,.xls"
-                onChange={handleDataFileSelect}
-              />
             </label>
+
+            <input
+              id="excel-upload"
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleDataFileSelect}
+            />
 
             {dataRows.length > 0 && (
               <button
@@ -339,8 +510,8 @@ export default function ClientLayout() {
           <ExcelStyleGrid data={dataRows} onDataChange={setDataRows} />
         </div>
 
-        <div className="flex justify-center">
-          <GenerateQRButton onClick={() => alert("Generate QR")} />
+        <div className="flex justify-center mt-8">
+          <GenerateQRButton onClick={handleGenerateExcel} />
         </div>
 
         <TemplateUploadDialog
@@ -362,7 +533,30 @@ export default function ClientLayout() {
           isOpen={isDeleteDialogOpen}
           onClose={() => setIsDeleteDialogOpen(false)}
           templates={templateOptions}
-          onDelete={handleDeleteSelectedTemplate}
+          onDelete={handleDeleteTemplate}
+        />
+
+        <AlertDialog
+          isOpen={openAlert}
+          title="Success"
+          message="Settings saved successfully!"
+          onClose={() => setOpenAlert(false)}
+        />
+
+        <AlertDialog
+          isOpen={openError}
+          title="Error"
+          message="Failed to delete template , Please try again."
+          onClose={() => setOpenError(false)}
+        />
+
+        <ExcelValidationDialog
+          isOpen={validationOpen}
+          errors={validationErrors}
+          onClose={() => {
+            setValidationOpen(false);
+            loadTemplateConfig(selectedTemplateId!);
+          }}
         />
 
         {isConfigDialogOpen && (
@@ -374,6 +568,7 @@ export default function ClientLayout() {
             removeGlobalRow={removeGlobalRow}
             updateGlobalRow={updateGlobalRow}
             systems={systems}
+            onUpdateSystemFieldCell={updateSystemFieldCell}
             onAddDataRow={addDataRow}
             onAddTypedDataRow={addTypedDataRow}
             onRemoveDataRow={removeDataRow}

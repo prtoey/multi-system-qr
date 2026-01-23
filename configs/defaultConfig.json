@@ -9,13 +9,13 @@
     {
       "id": "lot",
       "itemDataLabel": "LOT",
-      "itemDataCell": "BF3",
+      "itemDataCell": "BG3",
       "itemQRCell": "L4"
     },
     {
       "id": "qty",
       "itemDataLabel": "Q'TY",
-      "itemDataCell": "BF3",
+      "itemDataCell": "BH3",
       "itemQRCell": "W4"
     }
   ],
@@ -24,10 +24,11 @@
       "id": "1",
       "name": "PROMOS SYSTEM",
       "fields": [
-        { "label": "ITEM CODE", "cell": "A54" },
-        { "label": "LOT", "cell": "A55" },
-        { "label": "ORDER NO.", "cell": "A56" },
-        { "label": "ITEM APS", "cell": "A57" }
+        { "label": "ITEM CODE", "cell": "AS4" },
+        { "label": "LOT", "cell": "AS5" },
+        { "label": "ORDER NO.", "cell": "AS6" },
+        { "label": "ITEM APS", "cell": "AS7" },
+        { "label": "QR CODE", "cell": "AF4" }
       ],
       "dataRows": []
     },

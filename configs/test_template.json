@@ -1,0 +1,245 @@
+{
+  "templateId": "test_template",
+  "config": {
+    "globalRows": [
+      {
+        "id": "item",
+        "itemDataLabel": "ITEM",
+        "itemDataCell": "BF3",
+        "itemQRCell": "B4"
+      },
+      {
+        "id": "lot",
+        "itemDataLabel": "LOT",
+        "itemDataCell": "BG3",
+        "itemQRCell": "M4"
+      },
+      {
+        "id": "qty",
+        "itemDataLabel": "Q'TY",
+        "itemDataCell": "BH3",
+        "itemQRCell": "X4"
+      }
+    ],
+    "systems": [
+      {
+        "id": "1",
+        "name": "PROMOS SYSTEM",
+        "fields": [
+          {
+            "label": "ITEM CODE",
+            "cell": "AS4"
+          },
+          {
+            "label": "LOT",
+            "cell": "AS5"
+          },
+          {
+            "label": "ORDER NO.",
+            "cell": "AS6"
+          },
+          {
+            "label": "ITEM APS",
+            "cell": "AS7"
+          },
+          {
+            "label": "QR CODE",
+            "cell": "AG4"
+          }
+        ],
+        "dataRows": []
+      },
+      {
+        "id": "2",
+        "name": "PRINT LABEL",
+        "fields": [],
+        "dataRows": [
+          {
+            "id": "1768986196787-1",
+            "itemDataCell": "BG5",
+            "itemQRCell": "H12",
+            "type": "BOX",
+            "itemDataLabel": "Product label"
+          },
+          {
+            "id": "1768986196787-2",
+            "itemDataCell": "ฺBF5",
+            "itemQRCell": "A12",
+            "type": "BAG",
+            "itemDataLabel": "Product label"
+          },
+          {
+            "id": "1768986196787-3",
+            "itemDataCell": "BH5",
+            "itemQRCell": "O12",
+            "type": "MATCHING",
+            "itemDataLabel": "Product label"
+          },
+          {
+            "id": "1768988167020-3",
+            "itemDataCell": "BH6",
+            "itemQRCell": "AQ12",
+            "type": "MATCHING",
+            "itemDataLabel": "Dilator label"
+          },
+          {
+            "id": "1769045087598-1",
+            "itemDataCell": "BG9",
+            "itemQRCell": "H24",
+            "type": "BOX",
+            "itemDataLabel": "CN label "
+          },
+          {
+            "id": "1769045087598-2",
+            "itemDataCell": "BF9",
+            "itemQRCell": "A24",
+            "type": "BAG",
+            "itemDataLabel": "CN label "
+          },
+          {
+            "id": "1769045087598-3",
+            "itemDataCell": "BH7",
+            "itemQRCell": "O18",
+            "type": "MATCHING",
+            "itemDataLabel": "Barcoode label"
+          },
+          {
+            "id": "1769045122765-1",
+            "itemDataCell": "BG10",
+            "itemQRCell": "AJ24",
+            "type": "BOX",
+            "itemDataLabel": "KR label"
+          },
+          {
+            "id": "1769045122765-2",
+            "itemDataCell": "BF10",
+            "itemQRCell": "AC24",
+            "type": "BAG",
+            "itemDataLabel": "KR label"
+          },
+          {
+            "id": "1769045122765-3",
+            "itemDataCell": "BH9",
+            "itemQRCell": "O24",
+            "type": "MATCHING",
+            "itemDataLabel": "CN label"
+          },
+          {
+            "id": "1769045197734-3",
+            "itemDataCell": "BH10",
+            "itemQRCell": "AQ24",
+            "type": "MATCHING",
+            "itemDataLabel": "KR label"
+          },
+          {
+            "id": "1769045259754-3",
+            "itemDataCell": "BH11",
+            "itemQRCell": "A30",
+            "type": "MATCHING",
+            "itemDataLabel": "Check Label (Ver.)"
+          },
+          {
+            "id": "1769045261705-3",
+            "itemDataCell": "BH12",
+            "itemQRCell": "K30",
+            "type": "MATCHING",
+            "itemDataLabel": "Scan Barcode (Ver.)"
+          },
+          {
+            "id": "1769045263392-3",
+            "itemDataCell": "BH13",
+            "itemQRCell": "U30",
+            "type": "MATCHING"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "name": "ATTACH LABEL",
+        "fields": [],
+        "dataRows": [
+          {
+            "id": "1769045345506",
+            "itemDataCell": "BF14",
+            "itemQRCell": "A38",
+            "itemDataLabel": "Item"
+          },
+          {
+            "id": "1769045377421",
+            "itemDataCell": "BF15",
+            "itemQRCell": "H44",
+            "itemDataLabel": "Lot"
+          },
+          {
+            "id": "1769045395540",
+            "itemDataCell": "BF16",
+            "itemQRCell": "O38",
+            "itemDataLabel": "Q'ty"
+          },
+          {
+            "id": "1769045396406",
+            "itemDataCell": "BF17",
+            "itemQRCell": "V38",
+            "itemDataLabel": "DW1"
+          },
+          {
+            "id": "1769045397357",
+            "itemDataCell": "BF18",
+            "itemQRCell": "AC38",
+            "itemDataLabel": "Packing 1"
+          },
+          {
+            "id": "1769045397996",
+            "itemDataCell": "BF19",
+            "itemQRCell": "A44",
+            "itemDataLabel": "Master SOP"
+          },
+          {
+            "id": "1769045398811",
+            "itemDataCell": "BF20",
+            "itemQRCell": "H44",
+            "itemDataLabel": "Holder set"
+          },
+          {
+            "id": "1769045400011",
+            "itemDataCell": "BF21",
+            "itemQRCell": "O44",
+            "itemDataLabel": "SOP (Holder set)"
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "name": "BOXPACK",
+        "fields": [],
+        "dataRows": [
+          {
+            "id": "1769045526187",
+            "itemDataCell": "BF29",
+            "itemQRCell": "A51",
+            "itemDataLabel": "Item_lot"
+          },
+          {
+            "id": "1769045527275",
+            "itemDataCell": "BF30",
+            "itemQRCell": "H51",
+            "itemDataLabel": "item[tab]lot[tab]Q'ty"
+          },
+          {
+            "id": "1769045528433",
+            "itemDataCell": "BF31",
+            "itemQRCell": "O51",
+            "itemDataLabel": "Master SOP[tab]SOP[tab]DW"
+          },
+          {
+            "id": "1769045529433",
+            "itemDataCell": "BF35",
+            "itemQRCell": "AV50",
+            "itemDataLabel": "Match"
+          }
+        ]
+      }
+    ]
+  },
+  "updatedAt": "2026-01-23 13:21"
+}

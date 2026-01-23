@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { FileSpreadsheet, Trash2 } from "lucide-react";
 import { TemplateOption } from "../components/types";
-
+import AlertDialog from "./AlertDialog";
 interface TemplateDropdownProps {
   templates: TemplateOption[];
   selectedTemplateId: string | null;
@@ -13,8 +14,6 @@ export function TemplateDropdown({
   templates,
   selectedTemplateId,
   onTemplateChange,
-  onDeleteTemplate,
-  showDelete = false,
 }: TemplateDropdownProps) {
   if (templates.length === 0) {
     return (
@@ -24,19 +23,6 @@ export function TemplateDropdown({
       </div>
     );
   }
-
-  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
-
-  const handleDelete = (templateId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const template = templates.find((t) => t.id === templateId);
-    if (
-      template &&
-      confirm(`Are you sure you want to delete template "${template.name}"?`)
-    ) {
-      onDeleteTemplate?.(templateId);
-    }
-  };
 
   return (
     <div className="flex items-center gap-2">
@@ -55,16 +41,6 @@ export function TemplateDropdown({
           </option>
         ))}
       </select>
-
-      {showDelete && selectedTemplate && (
-        <button
-          onClick={(e) => handleDelete(selectedTemplate.id, e)}
-          className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition flex items-center justify-center"
-          title="Delete template"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
-      )}
     </div>
   );
 }

@@ -15,13 +15,21 @@ export async function POST(req: Request) {
 
   const filePath = path.join(configDir, `${templateId}.json`);
 
+  const now = new Date();
+  const updatedAt =
+    `${now.getFullYear()}-` +
+    `${String(now.getMonth() + 1).padStart(2, "0")}-` +
+    `${String(now.getDate()).padStart(2, "0")} ` +
+    `${String(now.getHours()).padStart(2, "0")}:` +
+    `${String(now.getMinutes()).padStart(2, "0")}`;
+
   fs.writeFileSync(
     filePath,
     JSON.stringify(
       {
         templateId,
         config,
-        updatedAt: new Date().toISOString(),
+        updatedAt,
       },
       null,
       2

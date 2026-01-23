@@ -1,20 +1,16 @@
-import { Trash2, FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet } from "lucide-react";
 import { TemplateConfig } from "../components/types";
 
 interface TemplateSelectorProps {
   templates: TemplateConfig[];
   selectedTemplateId?: string | null;
   onTemplateChange: (templateId: string) => void;
-  onDeleteTemplate?: (templateId: string) => void;
-  showDelete?: boolean;
 }
 
 export function TemplateSelector({
   templates,
   selectedTemplateId,
   onTemplateChange,
-  onDeleteTemplate,
-  showDelete = false,
 }: TemplateSelectorProps) {
   if (templates.length === 0) {
     return (
@@ -29,16 +25,17 @@ export function TemplateSelector({
       <label className="block text-sm font-semibold text-gray-700 mb-2">
         Select Template
       </label>
+
       <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
         {templates.map((template) => (
           <div
             key={template.id}
+            onClick={() => onTemplateChange(template.id)}
             className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition ${
               selectedTemplateId === template.id
                 ? "border-indigo-600 bg-indigo-50"
                 : "border-gray-300 bg-white hover:border-indigo-400"
             }`}
-            onClick={() => onTemplateChange(template.id)}
           >
             <div className="flex items-center gap-3">
               <FileSpreadsheet
@@ -63,19 +60,6 @@ export function TemplateSelector({
                 </div>
               </div>
             </div>
-            {showDelete && onDeleteTemplate && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(`Delete template "${template.name}"?`)) {
-                    onDeleteTemplate(template.id);
-                  }
-                }}
-                className="text-red-500 hover:text-red-700 transition p-2"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
           </div>
         ))}
       </div>

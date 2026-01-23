@@ -25,7 +25,7 @@ export function ExcelStyleGrid({ data, onDataChange }: ExcelStyleGridProps) {
   const handleCellChange = (
     rowIndex: number,
     field: keyof DataRow,
-    value: string
+    value: string,
   ) => {
     const newData = [...data];
     newData[rowIndex] = { ...newData[rowIndex], [field]: value };
@@ -35,7 +35,7 @@ export function ExcelStyleGrid({ data, onDataChange }: ExcelStyleGridProps) {
   const handlePaste = (
     e: React.ClipboardEvent,
     rowIndex: number,
-    field: keyof DataRow
+    field: keyof DataRow,
   ) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData("text");
@@ -261,7 +261,7 @@ export function ExcelStyleGrid({ data, onDataChange }: ExcelStyleGridProps) {
                           handleCellChange(
                             index,
                             "materialCode",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         onPaste={(e) => handlePaste(e, index, "materialCode")}
@@ -319,14 +319,7 @@ export function ExcelStyleGrid({ data, onDataChange }: ExcelStyleGridProps) {
         </div>
 
         {/* Sheet tabs at bottom */}
-        <div className="bg-gray-100 border-t border-gray-300 px-3 py-1 flex items-center gap-2">
-          <button className="px-3 py-1 text-xs font-medium bg-white border-t-2 border-l border-r border-blue-500 rounded-t">
-            Sheet1
-          </button>
-          <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded">
-            +
-          </button>
-        </div>
+        <div className="bg-gray-100 border-t border-gray-300 px-3 py-3 flex items-center gap-2"></div>
       </div>
     </div>
   );

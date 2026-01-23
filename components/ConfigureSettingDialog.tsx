@@ -2,7 +2,6 @@ import { X } from "lucide-react";
 import {
   GlobalDataRow,
   SystemConfig,
-  LabelConfig,
   TemplateOption,
 } from "../components/types";
 import { SaveSettingsButton } from "./SaveSettingsButton";
@@ -25,6 +24,11 @@ interface ConfigureSettingDialogProps {
     value: string
   ) => void;
   systems: SystemConfig[];
+  onUpdateSystemFieldCell: (
+    systemId: string,
+    fieldIndex: number,
+    value: string
+  ) => void;
   onAddDataRow: (systemId: string) => void;
   onAddTypedDataRow: (systemId: string) => void;
   onRemoveDataRow: (systemId: string, rowId: string) => void;
@@ -58,6 +62,7 @@ export function ConfigureSettingDialog({
   updateGlobalRow,
 
   systems,
+  onUpdateSystemFieldCell,
   onAddDataRow,
   onAddTypedDataRow,
   onRemoveDataRow,
@@ -176,8 +181,15 @@ export function ConfigureSettingDialog({
                         <input
                           type="text"
                           value={field.cell}
-                          className="w-full px-2 py-1 border border-green-500 rounded focus:ring-2 focus:ring-green-400 focus:outline-none"
-                          readOnly
+                          onChange={(e) =>
+                            onUpdateSystemFieldCell(
+                              system.id,
+                              idx,
+                              e.target.value
+                            )
+                          }
+                          className="w-full px-2 py-1 border border-green-500 rounded
+             focus:ring-2 focus:ring-green-400 focus:outline-none"
                         />
                       </div>
                     ))}
@@ -383,12 +395,7 @@ export function ConfigureSettingDialog({
 
         {/* Save/Reset Buttons in Dialog */}
         <div className="sticky bottom-0 bg-white border-t border-indigo-200 p-6 flex justify-center gap-4">
-          <SaveSettingsButton
-            onClick={() => {
-              onSaveSettings();
-              onClose();
-            }}
-          />
+          <SaveSettingsButton onClick={onSaveSettings} />
         </div>
       </div>
     </div>
