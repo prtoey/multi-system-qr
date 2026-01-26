@@ -1,18 +1,22 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { BiCheckCircle } from "react-icons/bi";
-import { BiError } from "react-icons/bi";
-import { BiErrorCircle } from "react-icons/bi";
-import { BiXCircle } from "react-icons/bi";
+import { useEffect, useRef, useState } from "react";
+import {
+  BiCheckCircle,
+  BiError,
+  BiErrorCircle,
+  BiXCircle,
+} from "react-icons/bi";
+import { LuImport } from "react-icons/lu";
 
 export type AlertDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   onConfirm?: () => void;
-
   title: string;
   message: string;
+  file?: File | null;
+  setFile?: (file: File | null) => void;
 
   confirmText?: string;
   cancelText?: string;
@@ -25,23 +29,30 @@ export default function AlertDialog({
   onConfirm,
   title,
   message,
+  file,
+  setFile,
   loading = false,
 }: AlertDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const isConfirm = Boolean(onConfirm);
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-
     if (isOpen && !dialog.open) dialog.showModal();
     if (!isOpen && dialog.open) dialog.close();
   }, [isOpen]);
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
   return (
     <dialog ref={dialogRef} className="modal">
       <div className="modal-box w-100 p-5">
-        {/* Close button */}
         <button
           className="btn btn-sm btn-circle btn-ghost absolute right-3 top-3"
           onClick={onClose}
@@ -49,8 +60,6 @@ export default function AlertDialog({
         >
           ✕
         </button>
-
-        {/* Icon + Title */}
         <div className="flex items-center justify-center mt-4">
           <span className="flex size-10 items-center justify-center rounded-full ">
             {title === "Success" && (
@@ -65,19 +74,19 @@ export default function AlertDialog({
             {title === "Error" && (
               <BiXCircle className="size-10 text-red-600" />
             )}
+            {title === "Import" && (
+              <LuImport className="size-10 text-blue-600" />
+            )}
           </span>
         </div>
-
-        {/* Message */}
         <p className="mt-6 mb-5 font-semibold text-center text-md text-gray-600">
           {message}
         </p>
-
         {title === "Confirmation" && (
           <div className="mt-6 flex justify-end gap-2 ">
             <button
               className="btn bg-red-600 hover:bg-red-700 text-white rounded-lg w-20"
-              onClick={onConfirm}
+              onClick={() => onConfirm?.()}
             >
               YES
             </button>
@@ -87,6 +96,25 @@ export default function AlertDialog({
             >
               NO
             </button>
+          </div>
+        )}
+        {title === "Import" && (
+          <div>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => setFile?.(e.target.files?.[0] ?? null)}
+              className="file-input w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-700 focus:outline-none"
+            />
+            <div className="mt-6 flex justify-end gap-2 ">
+              <button
+                className="btn bg-blue-600 hover:bg-blue-700 text-white rounded-lg w-20"
+                onClick={onConfirm}
+                disabled={!file}
+              >
+                UPLOAD
+              </button>
+            </div>
           </div>
         )}
       </div>

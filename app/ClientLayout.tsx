@@ -51,6 +51,7 @@ export default function ClientLayout() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [openAlert, setOpenAlert] = useState(false);
   const [openError, setOpenError] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   /* TEMPLATE LIST */
   const fetchTemplateOptions = async () => {
@@ -422,15 +423,49 @@ export default function ClientLayout() {
 
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
-
+    const date = new Date()
+      .toISOString()
+      .replace("T", "_")
+      .slice(0, 16)
+      .replace(/:/g, "-");
     a.href = url;
-    a.download = `${selectedTemplateId}.xlsx`;
+    // a.download = `${selectedTemplateId}.xlsx`;
+    a.download = `${selectedTemplateId}_${date}.xlsx`;
     document.body.appendChild(a);
     a.click();
 
     a.remove();
     window.URL.revokeObjectURL(url);
   }
+
+  const [fileToImport, setFileToImport] = useState<File | null>(null);
+
+  const handleImportExcel = async () => {
+    if (!fileToImport || !selectedTemplateId) {
+      alert("Please select a file and template");
+      return;
+    }
+
+    const config = { globalRows, systems };
+
+    const formData = new FormData();
+    formData.append("file", fileToImport);
+    formData.append("templateId", selectedTemplateId);
+    formData.append("config", JSON.stringify(config));
+
+    const res = await fetch("/api/read-excel", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      alert("Import failed");
+      return;
+    }
+
+    const result = await res.json();
+    console.log("IMPORT RESULT:", result);
+  };
 
   return (
     <div className="min-h-screen bg-blue-50 p-6">
@@ -511,7 +546,12 @@ export default function ClientLayout() {
         </div>
 
         <div className="flex justify-center mt-8">
-          <GenerateQRButton onClick={handleGenerateExcel} />
+          <GenerateQRButton
+            onClick={() => {
+              handleGenerateExcel();
+              setImportOpen(true);
+            }}
+          />
         </div>
 
         <TemplateUploadDialog
@@ -557,6 +597,20 @@ export default function ClientLayout() {
             setValidationOpen(false);
             loadTemplateConfig(selectedTemplateId!);
           }}
+        />
+
+        <AlertDialog
+          isOpen={importOpen}
+          title="Import"
+          message="Please select an Excel file to import data."
+          onClose={() => setImportOpen(false)}
+          onConfirm={async () => {
+            setImportOpen(false);
+            await handleImportExcel();
+            setFileToImport(null);
+          }}
+          file={fileToImport}
+          setFile={setFileToImport}
         />
 
         {isConfigDialogOpen && (
