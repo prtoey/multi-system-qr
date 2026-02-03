@@ -1,19 +1,9 @@
 {
   "templates": [
     {
-      "name": "QR_Generator_Example_Template",
-      "filename": "QR_Generator_Example_Template.xlsx",
-      "createdAt": "2026-01-20 07:49"
-    },
-    {
       "name": "test_template",
       "filename": "test template.xlsx",
       "createdAt": "2026-01-22 14:19"
-    },
-    {
-      "name": "test",
-      "filename": "test.xlsx",
-      "createdAt": "2026-01-22 15:04"
     }
   ]
 }

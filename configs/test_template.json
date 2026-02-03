@@ -63,7 +63,7 @@
           },
           {
             "id": "1768986196787-2",
-            "itemDataCell": "ฺBF5",
+            "itemDataCell": "BF5",
             "itemQRCell": "A12",
             "type": "BAG",
             "itemDataLabel": "Product label"
@@ -118,6 +118,13 @@
             "itemDataLabel": "KR label"
           },
           {
+            "id": "1769574233078-3",
+            "itemDataCell": "BH8",
+            "itemQRCell": "AQ18",
+            "type": "MATCHING",
+            "itemDataLabel": "Barcode Dilator label"
+          },
+          {
             "id": "1769045122765-3",
             "itemDataCell": "BH9",
             "itemQRCell": "O24",
@@ -149,7 +156,8 @@
             "id": "1769045263392-3",
             "itemDataCell": "BH13",
             "itemQRCell": "U30",
-            "type": "MATCHING"
+            "type": "MATCHING",
+            "itemDataLabel": "Compare (Ver.)"
           }
         ]
       },
@@ -159,15 +167,15 @@
         "fields": [],
         "dataRows": [
           {
-            "id": "1769045345506",
+            "id": "1769660636739",
             "itemDataCell": "BF14",
-            "itemQRCell": "A38",
+            "itemQRCell": "B38",
             "itemDataLabel": "Item"
           },
           {
             "id": "1769045377421",
             "itemDataCell": "BF15",
-            "itemQRCell": "H44",
+            "itemQRCell": "H38",
             "itemDataLabel": "Lot"
           },
           {
@@ -241,5 +249,5 @@
       }
     ]
   },
-  "updatedAt": "2026-01-23 13:21"
+  "updatedAt": "2026-02-03 13:23"
 }

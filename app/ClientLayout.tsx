@@ -9,7 +9,7 @@ import {
   SystemConfig,
   DataRow,
 } from "../components/types";
-
+import { arrayMove } from "@dnd-kit/sortable";
 import { TemplateButton } from "../components/TemplateButton";
 import { EditTemplateButton } from "../components/EditTemplateButton";
 import { DeleteTemplateButton } from "../components/DeleteTemplateButton";
@@ -120,6 +120,15 @@ export default function ClientLayout() {
       prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)),
     );
 
+  const reorderGlobalRow = (activeId: string, overId: string) => {
+    setGlobalRows((prev) => {
+      const oldIndex = prev.findIndex((r) => r.id === activeId);
+      const newIndex = prev.findIndex((r) => r.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
+
   const updateSystemFieldCell = (
     systemId: string,
     fieldIndex: number,
@@ -192,6 +201,30 @@ export default function ClientLayout() {
     );
   };
 
+  const onAddDataRow = (
+    systemId: string,
+    type?: "BAG" | "BOX" | "MATCHING",
+  ) => {
+    setSystems((prev) =>
+      prev.map((sys) =>
+        sys.id === systemId
+          ? {
+              ...sys,
+              dataRows: [
+                ...sys.dataRows,
+                {
+                  id: Date.now().toString(),
+                  itemDataCell: "",
+                  itemQRCell: "",
+                  type,
+                },
+              ],
+            }
+          : sys,
+      ),
+    );
+  };
+
   const removeDataRow = (systemId: string, rowId: string) =>
     setSystems((prev) =>
       prev.map((sys) =>
@@ -225,11 +258,38 @@ export default function ClientLayout() {
       ),
     );
 
+  const onReorderDataRow = (
+    systemId: string,
+    activeId: string,
+    overId: string,
+  ) => {
+    setSystems((prev) =>
+      prev.map((sys) => {
+        if (sys.id !== systemId) return sys;
+
+        const oldIndex = sys.dataRows.findIndex((r) => r.id === activeId);
+        const newIndex = sys.dataRows.findIndex((r) => r.id === overId);
+
+        return {
+          ...sys,
+          dataRows: arrayMove(sys.dataRows, oldIndex, newIndex),
+        };
+      }),
+    );
+  };
+
   /* Validate Excel Cell */
   const isValidExcelCell = (cell?: string) => {
     if (!cell) return false;
+
+    const trimmed = cell.trim().toUpperCase();
+
+    // STRICT Excel cell format: A1, AA10, BF5
+    const excelCellRegex = /^[A-Z]{1,3}[1-9][0-9]*$/;
+    if (!excelCellRegex.test(trimmed)) return false;
+
     try {
-      const decoded = XLSX.utils.decode_cell(cell.toUpperCase());
+      const decoded = XLSX.utils.decode_cell(trimmed);
       return decoded.r >= 0 && decoded.c >= 0;
     } catch {
       return false;
@@ -423,14 +483,11 @@ export default function ClientLayout() {
 
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const date = new Date()
-      .toISOString()
-      .replace("T", "_")
-      .slice(0, 16)
-      .replace(/:/g, "-");
+    const now = new Date();
+    const date = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-US", { month: "short" })} ${now.getFullYear()} (${now.getHours().toString().padStart(2, "0")}.${now.getMinutes().toString().padStart(2, "0")})`;
     a.href = url;
     // a.download = `${selectedTemplateId}.xlsx`;
-    a.download = `${selectedTemplateId}_${date}.xlsx`;
+    a.download = `FileUploadQR_${date}.xlsx`;
     document.body.appendChild(a);
     a.click();
 
@@ -452,6 +509,7 @@ export default function ClientLayout() {
     formData.append("file", fileToImport);
     formData.append("templateId", selectedTemplateId);
     formData.append("config", JSON.stringify(config));
+    formData.append("rowCount", String(dataRows.length));
 
     const res = await fetch("/api/read-excel", {
       method: "POST",
@@ -463,8 +521,19 @@ export default function ClientLayout() {
       return;
     }
 
-    const result = await res.json();
-    console.log("IMPORT RESULT:", result);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const now = new Date();
+    const date = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-US", { month: "short" })} ${now.getFullYear()} (${now.getHours().toString().padStart(2, "0")}.${now.getMinutes().toString().padStart(2, "0")})`;
+    a.href = url;
+    a.href = url;
+    a.download = `GenerateQR_${date}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -603,14 +672,17 @@ export default function ClientLayout() {
           isOpen={importOpen}
           title="Import"
           message="Please select an Excel file to import data."
-          onClose={() => setImportOpen(false)}
-          onConfirm={async () => {
-            setImportOpen(false);
-            await handleImportExcel();
-            setFileToImport(null);
-          }}
           file={fileToImport}
           setFile={setFileToImport}
+          onClose={() => {
+            setImportOpen(false);
+            setFileToImport(null);
+          }}
+          onConfirm={async () => {
+            await handleImportExcel();
+            setImportOpen(false);
+            setFileToImport(null);
+          }}
         />
 
         {isConfigDialogOpen && (
@@ -621,16 +693,14 @@ export default function ClientLayout() {
             addGlobalRow={addGlobalRow}
             removeGlobalRow={removeGlobalRow}
             updateGlobalRow={updateGlobalRow}
+            reorderGlobalRow={reorderGlobalRow}
             systems={systems}
             onUpdateSystemFieldCell={updateSystemFieldCell}
-            onAddDataRow={addDataRow}
-            onAddTypedDataRow={addTypedDataRow}
+            onAddDataRow={onAddDataRow}
             onRemoveDataRow={removeDataRow}
             onUpdateDataRow={updateDataRow}
+            onReorderDataRow={onReorderDataRow}
             onSaveSettings={handleSaveSettings}
-            onResetSettings={() =>
-              selectedTemplateId && loadTemplateConfig(selectedTemplateId)
-            }
             templates={templateOptions}
             selectedTemplateId={selectedTemplateId}
             onTemplateChange={setSelectedTemplateId}

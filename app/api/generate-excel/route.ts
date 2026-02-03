@@ -220,39 +220,46 @@ function duplicateTemplateSheet(
     newRow.commit();
   });
 
-  // Copy merged cells and preserve right/bottom borders
+  // Copy merged cells and preserve all borders for merged ranges
   const merges = (templateSheet as any)._merges;
   if (merges) {
     for (const key of Object.keys(merges)) {
       const m = merges[key];
       newSheet.mergeCells(m.top, m.left, m.bottom, m.right);
 
-      // Preserve right and bottom borders for merged ranges
-      const bottomRow = m.bottom;
-      const rightCol = m.right;
-
-      // Bottom border for all columns in the bottom row of the merge
-      for (let col = m.left; col <= m.right; col++) {
-        const cell = newSheet.getRow(bottomRow).getCell(col);
-        const templateCell = templateSheet.getRow(bottomRow).getCell(col);
-        if (templateCell.border?.bottom) {
-          cell.border = {
-            ...cell.border,
-            bottom: { ...templateCell.border.bottom },
-          };
+      // Copy all borders for each cell in the merged range
+      for (let row = m.top; row <= m.bottom; row++) {
+        for (let col = m.left; col <= m.right; col++) {
+          const cell = newSheet.getRow(row).getCell(col);
+          const templateCell = templateSheet.getRow(row).getCell(col);
+          if (templateCell.border) {
+            cell.border = {
+              ...templateCell.border,
+              left: templateCell.border.left
+                ? { ...templateCell.border.left }
+                : undefined,
+              right: templateCell.border.right
+                ? { ...templateCell.border.right }
+                : undefined,
+              top: templateCell.border.top
+                ? { ...templateCell.border.top }
+                : undefined,
+              bottom: templateCell.border.bottom
+                ? { ...templateCell.border.bottom }
+                : undefined,
+            };
+          }
         }
       }
 
-      // Right border for all rows in the rightmost column of the merge
-      for (let row = m.top; row <= m.bottom; row++) {
-        const cell = newSheet.getRow(row).getCell(rightCol);
-        const templateCell = templateSheet.getRow(row).getCell(rightCol);
-        if (templateCell.border?.right) {
-          cell.border = {
-            ...cell.border,
-            right: { ...templateCell.border.right },
-          };
-        }
+      // 🔑 Ensure the left border of the leftmost cell in the merged range is set
+      const leftCell = newSheet.getRow(m.top).getCell(m.left);
+      const templateLeftCell = templateSheet.getRow(m.top).getCell(m.left);
+      if (templateLeftCell.border && templateLeftCell.border.left) {
+        leftCell.border = {
+          ...leftCell.border,
+          left: { ...templateLeftCell.border.left },
+        };
       }
     }
   }

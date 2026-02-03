@@ -6,9 +6,22 @@ interface ExcelStyleGridProps {
   onDataChange: (data: DataRow[]) => void;
 }
 
-const COLUMN_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
-
 export function ExcelStyleGrid({ data, onDataChange }: ExcelStyleGridProps) {
+  // Helper to check if a row is empty (all fields except id are empty)
+  const isRowEmpty = (row: DataRow) =>
+    !row.orderNo &&
+    !row.itemCode &&
+    !row.externalLot &&
+    !row.materialCode &&
+    !row.internalLot &&
+    !row.qty;
+
+  // Filter out empty rows before updating
+  const setRealRows = (rows: DataRow[]) => {
+    const realRows = rows.filter((row) => !isRowEmpty(row));
+    onDataChange(realRows);
+  };
+
   const handleAddRow = () => {
     const newRow: DataRow = {
       id: Date.now().toString(),
@@ -19,7 +32,7 @@ export function ExcelStyleGrid({ data, onDataChange }: ExcelStyleGridProps) {
       internalLot: "",
       qty: "",
     };
-    onDataChange([...data, newRow]);
+    setRealRows([...data, newRow]);
   };
 
   const handleCellChange = (
@@ -29,7 +42,7 @@ export function ExcelStyleGrid({ data, onDataChange }: ExcelStyleGridProps) {
   ) => {
     const newData = [...data];
     newData[rowIndex] = { ...newData[rowIndex], [field]: value };
-    onDataChange(newData);
+    setRealRows(newData);
   };
 
   const handlePaste = (
@@ -89,10 +102,10 @@ export function ExcelStyleGrid({ data, onDataChange }: ExcelStyleGridProps) {
       });
     });
 
-    onDataChange(newData);
+    setRealRows(newData);
   };
 
-  // Ensure at least 15 rows
+  // Ensure at least 15 rows for display
   const displayRows = [...data];
   while (displayRows.length < 15) {
     displayRows.push({
